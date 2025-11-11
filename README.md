@@ -8,7 +8,7 @@
 
 **Variables:** 'minutesPerHour' (camelCase)
 
-**Classes:** 'MyClas's (PascalCase)
+**Classes:** 'MyClass' (PascalCase)
 
 **CONSTANTS:** 'MAX_ATTEMPTS' (UpperSnakeCase)
 
