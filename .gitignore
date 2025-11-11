@@ -1,3 +1,5 @@
+# The following file types will be automatically ignored by 'git add' command.
+
 # Compiled class file
 *.class
 
