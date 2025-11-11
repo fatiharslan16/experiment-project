@@ -1,7 +1,7 @@
-### CS464 Learning Preference Experiment
-
+## Environment
 
 **Java Version: Java 21**
+
 **Build Tool: Maven**
 
 ## Code Style & Formatting
