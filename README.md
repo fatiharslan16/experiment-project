@@ -9,7 +9,7 @@
 * **Classes:** MyClass (PascalCase)
 * **CONSTANTS:** MAX_ATTEMPTS (UpperSnakeCase)
 * **Braces:** if (condition) { same line as statement
-    // code goes here
+*    // code goes here
 } else {
     // other code
 }
