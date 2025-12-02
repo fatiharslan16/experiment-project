@@ -16,8 +16,10 @@ import edu.group12.experiment.ui.StimulusScreen2;
 import edu.group12.experiment.ui.StimulusScreen3;
 import edu.group12.experiment.ui.StimulusScreen4;
 
+import java.awt.Desktop;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,7 +29,7 @@ public class App {
         ExperimentState experimentState = new ExperimentState();
         experimentState.setQuestions(initQuestions());
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 8080), 0);
 
         server.createContext("/", new MainScreen());
         server.createContext("/pretest1", new PreTestScreen1(experimentState));
@@ -47,13 +49,30 @@ public class App {
 
         server.setExecutor(null);
 
-        System.out.println("Experiment server running at http://localhost:8080");
+        System.out.println("Experiment server running at http://127.0.0.1:8080");
         server.start();
+
+      
+        new Thread(() -> {
+            try {
+                Thread.sleep(300);
+                URI uri = new URI("http://127.0.0.1:8080/");
+                if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                    Desktop.getDesktop().browse(uri);
+                } else {
+                    String os = System.getProperty("os.name").toLowerCase();
+                    if (os.contains("mac"))       new ProcessBuilder("open", uri.toString()).start();
+                    else if (os.contains("win"))  new ProcessBuilder("cmd", "/c", "start", uri.toString()).start();
+                    else                          new ProcessBuilder("xdg-open", uri.toString()).start();
+                }
+            } catch (Exception ignored) {}
+        }).start();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> server.stop(0)));
     }
 
     private static List<Question> initQuestions() {
         List<Question> questions = new ArrayList<>();
-
         for (int i = 1; i <= 20; i++) {
             List<String> options = new ArrayList<>();
             options.add("Option A");
@@ -62,15 +81,13 @@ public class App {
             options.add("Option D");
 
             Question question = new Question(
-                    i,
-                    "Placeholder question " + i + " (replace with real content).",
-                    options,
-                    0 // right now A is correct
+                i,
+                "Placeholder question " + i + " (replace with real content).",
+                options,
+                0 
             );
-
             questions.add(question);
         }
-
         return questions;
     }
 }
