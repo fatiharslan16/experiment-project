@@ -10,6 +10,9 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class CSVWriter {
 
@@ -22,6 +25,7 @@ public class CSVWriter {
             Map<Integer, Integer> answersByQuestionId
     ) throws IOException {
 
+     
         File directory = new File(RESULTS_DIRECTORY);
         if (!directory.exists()) {
             boolean created = directory.mkdirs();
@@ -33,20 +37,47 @@ public class CSVWriter {
         File file = new File(directory, RESULTS_FILE_NAME);
         boolean writeHeader = !file.exists();
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, true))) {
+      
+        BufferedWriter desktopWriter = null;
+        boolean desktopWriteHeader = false;
+        try {
+            Path baseDir = Paths.get(System.getProperty("user.home"), "Desktop", "ExperimentResults");
+            Files.createDirectories(baseDir);
 
+            String id = sanitizeFileComponent(participant != null ? participant.getParticipantId() : null);
+            Path perParticipant = baseDir.resolve(id + ".csv");
+            desktopWriteHeader = !Files.exists(perParticipant);
+            desktopWriter = new BufferedWriter(new FileWriter(perParticipant.toFile(), true));
+        } catch (IOException e) {
+            
+            System.err.println("Note: Could not open Desktop participant file: " + e.getMessage());
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, true))) {
+           
             if (writeHeader) {
-                writer.write("timestamp,participantId,condition,learningPreference,"
+                String header = "timestamp,participantId,condition,learningPreference,"
                         + "questionId,chosenOptionIndex,correctOptionIndex,isCorrect,"
-                        + "stimuliDurationSeconds,quizDurationSeconds,totalScore");
+                        + "stimuliDurationSeconds,quizDurationSeconds,totalScore";
+                writer.write(header);
                 writer.newLine();
+            }
+            if (desktopWriter != null && desktopWriteHeader) {
+                String header = "timestamp,participantId,condition,learningPreference,"
+                        + "questionId,chosenOptionIndex,correctOptionIndex,isCorrect,"
+                        + "stimuliDurationSeconds,quizDurationSeconds,totalScore";
+                desktopWriter.write(header);
+                desktopWriter.newLine();
             }
 
             String timestamp = Instant.now().toString();
+            long stimuliDurationSeconds = participant != null ? participant.getStimuliDurationSeconds() : 0;
+            long quizDurationSeconds = participant != null ? participant.getQuizDurationSeconds() : 0;
+            int totalScore = participant != null ? participant.getTotalScore() : 0;
 
-            long stimuliDurationSeconds = participant.getStimuliDurationSeconds();
-            long quizDurationSeconds = participant.getQuizDurationSeconds();
-            int totalScore = participant.getTotalScore();
+            String participantId = participant != null ? participant.getParticipantId() : "";
+            String condition = participant != null ? participant.getCondition() : "";
+            String learningPreference = participant != null ? participant.getLearningPreference() : "";
 
             for (Question question : questions) {
                 Integer chosenOptionIndex = answersByQuestionId.get(question.getId());
@@ -59,9 +90,9 @@ public class CSVWriter {
 
                 String line = String.join(",",
                         escapeCsv(timestamp),
-                        escapeCsv(participant.getParticipantId()),
-                        escapeCsv(participant.getCondition()),
-                        escapeCsv(participant.getLearningPreference()),
+                        escapeCsv(participantId),
+                        escapeCsv(condition),
+                        escapeCsv(learningPreference),
                         String.valueOf(question.getId()),
                         String.valueOf(chosenOptionIndex),
                         String.valueOf(correctOptionIndex),
@@ -73,23 +104,36 @@ public class CSVWriter {
 
                 writer.write(line);
                 writer.newLine();
+
+                if (desktopWriter != null) {
+                    desktopWriter.write(line);
+                    desktopWriter.newLine();
+                }
+            }
+        } finally {
+            if (desktopWriter != null) {
+                try { desktopWriter.close(); } catch (IOException ignored) {}
             }
         }
+    }
+
+    private static String sanitizeFileComponent(String raw) {
+        String s = (raw == null || raw.isBlank())
+                ? ("participant-" + System.currentTimeMillis())
+                : raw.trim();
+        
+        return s.replaceAll("[\\\\/:*?\"<>|]", "_");
     }
 
     private static String escapeCsv(String value) {
         if (value == null) {
             return "";
         }
-
         boolean mustQuote = value.contains(",") || value.contains("\"") || value.contains("\n");
         String escaped = value.replace("\"", "\"\"");
-
         if (mustQuote) {
             return "\"" + escaped + "\"";
         }
-
         return escaped;
     }
 }
-
